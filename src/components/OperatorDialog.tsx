@@ -51,7 +51,7 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
             name: name.trim(),
             role: role
           })
-          .eq('id', operator.id);
+          .eq('id', parseInt(operator.id)); // Convert string to number
 
         if (error) throw error;
         toast({
