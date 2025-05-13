@@ -111,13 +111,13 @@ const BreakScheduleTable: React.FC = () => {
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th className="bg-table-header text-white p-2 text-sm md:text-base border border-gray-300">TROCADOR</th>
-                <th className="bg-table-header text-white p-2 text-sm md:text-base border border-gray-300">15h</th>
-                <th className="bg-table-header text-white p-2 text-sm md:text-base border border-gray-300">16h</th>
-                <th className="bg-table-header text-white p-2 text-sm md:text-base border border-gray-300">17h</th>
-                <th className="bg-table-header text-white p-2 text-sm md:text-base border border-gray-300">18h</th>
-                <th className="bg-table-header text-white p-2 text-sm md:text-base border border-gray-300">19h</th>
-                <th className="bg-table-header text-white p-2 text-sm md:text-base border border-gray-300">20h</th>
+                <th className="bg-blue-600 text-white p-2 text-sm md:text-base border border-blue-300">TROCADOR</th>
+                <th className="bg-blue-600 text-white p-2 text-sm md:text-base border border-blue-300">15h</th>
+                <th className="bg-blue-600 text-white p-2 text-sm md:text-base border border-blue-300">16h</th>
+                <th className="bg-blue-600 text-white p-2 text-sm md:text-base border border-blue-300">17h</th>
+                <th className="bg-blue-600 text-white p-2 text-sm md:text-base border border-blue-300">18h</th>
+                <th className="bg-blue-600 text-white p-2 text-sm md:text-base border border-blue-300">19h</th>
+                <th className="bg-blue-600 text-white p-2 text-sm md:text-base border border-blue-300">20h</th>
               </tr>
             </thead>
             <tbody>
@@ -126,15 +126,15 @@ const BreakScheduleTable: React.FC = () => {
                 if (!supervisor) return null;
                 
                 return (
-                  <tr key={supervisorId} className={index % 2 === 0 ? "bg-table-row-even" : "bg-table-row-odd"}>
-                    <td className="p-2 text-center border border-gray-300 font-semibold">{supervisor.name}</td>
+                  <tr key={supervisorId} className={index % 2 === 0 ? "bg-blue-50" : "bg-blue-100"}>
+                    <td className="p-2 text-center border border-blue-200 font-semibold">{supervisor.name}</td>
                     {[15, 16, 17, 18, 19, 20].map(hour => {
                       const schedule = schedules.find(s => s.hour === hour);
-                      if (!schedule) return <td key={hour} className="p-2 text-center border border-gray-300">-</td>;
+                      if (!schedule) return <td key={hour} className="p-2 text-center border border-blue-200">-</td>;
                       
                       const operator = getOperatorById(schedule.operatorId);
                       return (
-                        <td key={hour} className="p-2 text-center border border-gray-300">
+                        <td key={hour} className="p-2 text-center border border-blue-200">
                           {operator?.name || '-'}
                         </td>
                       );

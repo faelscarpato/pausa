@@ -33,7 +33,11 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast({ title: "Erro", description: "Nome é obrigatório", variant: "destructive" });
+      toast({ 
+        title: "Erro", 
+        description: "Nome é obrigatório",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -50,7 +54,10 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
           .eq('id', operator.id);
 
         if (error) throw error;
-        toast({ title: "Sucesso", description: "Funcionário atualizado com sucesso" });
+        toast({ 
+          title: "Sucesso", 
+          description: "Funcionário atualizado com sucesso"
+        });
       } else if (mode === 'add') {
         // Adicionar novo funcionário no Supabase
         const { error } = await supabase
@@ -61,7 +68,10 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
           });
 
         if (error) throw error;
-        toast({ title: "Sucesso", description: "Funcionário adicionado com sucesso" });
+        toast({ 
+          title: "Sucesso", 
+          description: "Funcionário adicionado com sucesso"
+        });
       }
       
       setOpen(false);
