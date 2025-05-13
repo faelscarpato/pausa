@@ -18,6 +18,7 @@ import {
 import OperatorDialog from "@/components/OperatorDialog";
 import { toast } from "@/components/ui/use-toast";
 import { Operator } from "@/types/attendance";
+import { supabase } from "@/integrations/supabase/client";
 
 const AttendanceSummary: React.FC = () => {
   const { selectedDate, getAttendanceStatus } = useAttendance();
@@ -115,7 +116,7 @@ const AttendanceSummary: React.FC = () => {
                       
                     if (error) throw error;
                     
-                    toast({ 
+                    toast({
                       title: "Sucesso", 
                       description: "Funcionário excluído com sucesso" 
                     });
@@ -125,7 +126,7 @@ const AttendanceSummary: React.FC = () => {
                   }
                 } catch (error) {
                   console.error("Erro ao excluir funcionário:", error);
-                  toast({ 
+                  toast({
                     title: "Erro", 
                     description: "Ocorreu um erro ao excluir o funcionário", 
                     variant: "destructive" 

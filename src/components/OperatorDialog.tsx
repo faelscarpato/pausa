@@ -33,7 +33,7 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast({ 
+      toast({
         title: "Erro", 
         description: "Nome é obrigatório",
         variant: "destructive"
@@ -54,7 +54,7 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
           .eq('id', operator.id);
 
         if (error) throw error;
-        toast({ 
+        toast({
           title: "Sucesso", 
           description: "Funcionário atualizado com sucesso"
         });
@@ -68,7 +68,7 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
           });
 
         if (error) throw error;
-        toast({ 
+        toast({
           title: "Sucesso", 
           description: "Funcionário adicionado com sucesso"
         });
@@ -78,7 +78,7 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
       onSave();
     } catch (error) {
       console.error("Erro ao salvar funcionário:", error);
-      toast({ 
+      toast({
         title: "Erro", 
         description: "Ocorreu um erro ao salvar o funcionário", 
         variant: "destructive" 
