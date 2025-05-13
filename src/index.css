@@ -130,3 +130,33 @@
     @apply bg-header-light text-white p-3 text-center text-base md:text-lg;
   }
 }
+
+/* Estilos para impressão */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #root {
+    visibility: visible;
+  }
+  
+  .card-root {
+    box-shadow: none !important;
+  }
+  
+  table, table * {
+    visibility: visible;
+  }
+  
+  table {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  
+  button, .no-print {
+    display: none !important;
+  }
+}

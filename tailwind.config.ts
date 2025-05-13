@@ -68,10 +68,10 @@ export default {
 					light: '#004080'
 				},
 				table: {
-					header: '#cc0000', // Vermelho para cabeçalhos de tabela
+					header: '#0c4a6e', // Azul escuro para cabeçalhos de tabela
 					row: {
-						even: '#f8d7da', // Rosa claro para linhas pares
-						odd: '#f5f5f5'   // Cinza muito claro para linhas ímpares
+						even: '#e0f2fe', // Azul claro para linhas pares
+						odd: '#f0f9ff'   // Azul muito claro para linhas ímpares
 					}
 				}
 			},

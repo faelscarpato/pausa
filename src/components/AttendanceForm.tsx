@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useAttendance } from "@/contexts/AttendanceContext";
 import { 
   Select, 
@@ -11,34 +11,95 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { operators, formatDate } from "@/lib/data";
-import { AttendanceStatus } from "@/types/attendance";
+import { AttendanceStatus, Operator } from "@/types/attendance";
+import { Edit, PlusCircle } from "lucide-react";
+import OperatorDialog from "./OperatorDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 const AttendanceForm: React.FC = () => {
   const { selectedDate, addAttendanceRecord, getAttendanceStatus } = useAttendance();
   const [selectedOperator, setSelectedOperator] = React.useState<string>("");
   const [selectedStatus, setSelectedStatus] = React.useState<AttendanceStatus>("present");
+  const [operatorsList, setOperatorsList] = useState<Operator[]>([]);
   const formattedDate = formatDate(selectedDate);
+  
+  const fetchOperators = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      
+      const mappedOperators: Operator[] = data.map(emp => ({
+        id: emp.id.toString(),
+        name: emp.name,
+        role: emp.role as "operator" | "supervisor",
+        isSupervisor: emp.role === "supervisor"
+      }));
+      
+      setOperatorsList(mappedOperators);
+    } catch (error) {
+      console.error("Erro ao buscar funcionários:", error);
+    }
+  };
+  
+  useEffect(() => {
+    fetchOperators();
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!selectedOperator) return;
 
-    addAttendanceRecord({
-      date: formattedDate,
-      operatorId: selectedOperator,
-      status: selectedStatus,
-    });
+    // Adicionar registro de presença diretamente no Supabase
+    try {
+      const { error } = await supabase
+        .from('absences')
+        .upsert({
+          employee_id: parseInt(selectedOperator),
+          date: formattedDate,
+          status: selectedStatus === "absent" ? "absent" : "present",
+          reason: selectedStatus === "absent" ? "Não informado" : ""
+        }, {
+          onConflict: 'employee_id,date'
+        });
+      
+      if (error) throw error;
+      
+      // Atualizar o estado local
+      addAttendanceRecord({
+        date: formattedDate,
+        operatorId: selectedOperator,
+        status: selectedStatus,
+      });
 
-    // Reset form
-    setSelectedOperator("");
-    setSelectedStatus("present");
+      // Reset form
+      setSelectedOperator("");
+      setSelectedStatus("present");
+    } catch (error) {
+      console.error("Erro ao registrar presença:", error);
+    }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-center">Registrar Presença/Ausência</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle>Registrar Presença/Ausência</CardTitle>
+          <OperatorDialog 
+            mode="add"
+            onSave={fetchOperators}
+            trigger={
+              <Button variant="outline" size="sm">
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Novo Funcionário
+              </Button>
+            }
+          />
+        </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -46,23 +107,39 @@ const AttendanceForm: React.FC = () => {
             <label htmlFor="operator" className="block text-sm font-medium">
               Selecione o Funcionário:
             </label>
-            <Select 
-              value={selectedOperator} 
-              onValueChange={setSelectedOperator}
-            >
-              <SelectTrigger id="operator">
-                <SelectValue placeholder="Selecione um funcionário" />
-              </SelectTrigger>
-              <SelectContent>
-                {operators.map(op => (
-                  <SelectItem key={op.id} value={op.id}>
-                    {op.name}
-                    {getAttendanceStatus(op.id, formattedDate) !== "unregistered" && 
-                      ` (${getAttendanceStatus(op.id, formattedDate) === "present" ? "Presente" : "Ausente"})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex space-x-2">
+              <div className="flex-1">
+                <Select 
+                  value={selectedOperator} 
+                  onValueChange={setSelectedOperator}
+                >
+                  <SelectTrigger id="operator">
+                    <SelectValue placeholder="Selecione um funcionário" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {operatorsList.map(op => (
+                      <SelectItem key={op.id} value={op.id}>
+                        {op.name}
+                        {getAttendanceStatus(op.id, formattedDate) !== "unregistered" && 
+                          ` (${getAttendanceStatus(op.id, formattedDate) === "present" ? "Presente" : "Ausente"})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedOperator && (
+                <OperatorDialog 
+                  mode="edit"
+                  operator={operatorsList.find(op => op.id === selectedOperator)}
+                  onSave={fetchOperators}
+                  trigger={
+                    <Button variant="outline" size="icon">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  }
+                />
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
