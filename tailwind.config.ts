@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,17 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				header: {
+					DEFAULT: '#003366',  // Azul escuro para cabeçalhos
+					light: '#004080'
+				},
+				table: {
+					header: '#cc0000', // Vermelho para cabeçalhos de tabela
+					row: {
+						even: '#f8d7da', // Rosa claro para linhas pares
+						odd: '#f5f5f5'   // Cinza muito claro para linhas ímpares
+					}
 				}
 			},
 			borderRadius: {
