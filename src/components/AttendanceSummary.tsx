@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, X, Edit, Trash2, Plus } from "lucide-react";
@@ -14,7 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import OperatorDialog from "@/components/OperatorDialog";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { Operator } from "@/types/attendance";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
