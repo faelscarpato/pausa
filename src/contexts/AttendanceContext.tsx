@@ -1,8 +1,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { AttendanceStatus, DailyAttendance, BreakSchedule } from "@/types/attendance";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { formatDate } from "@/lib/data";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AttendanceContextProps {
   attendanceRecords: DailyAttendance[];
@@ -23,32 +24,59 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
   const [attendanceRecords, setAttendanceRecords] = useState<DailyAttendance[]>([]);
   const [breakSchedules, setBreakSchedules] = useState<BreakSchedule[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const { toast } = useToast();
 
-  // Load data from localStorage on startup
+  // Load data from Supabase on startup
   useEffect(() => {
-    const savedAttendance = localStorage.getItem("attendanceRecords");
-    const savedBreakSchedules = localStorage.getItem("breakSchedules");
+    const fetchAttendanceRecords = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('absences')
+          .select('*');
+        
+        if (error) throw error;
+        
+        if (data) {
+          const mappedRecords: DailyAttendance[] = data.map(record => ({
+            date: record.date,
+            operatorId: record.employee_id.toString(),
+            status: record.status === "absent" ? "absent" : "present"
+          }));
+          
+          setAttendanceRecords(mappedRecords);
+        }
+      } catch (error) {
+        console.error("Error fetching attendance records:", error);
+      }
+    };
     
-    if (savedAttendance) {
-      setAttendanceRecords(JSON.parse(savedAttendance));
-    }
+    const fetchBreakSchedules = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('break_schedules')
+          .select('*');
+        
+        if (error) throw error;
+        
+        if (data) {
+          const mappedSchedules: BreakSchedule[] = data.map(schedule => ({
+            date: schedule.date,
+            supervisorId: schedule.supervisor_id.toString(),
+            operatorId: schedule.operator_id ? schedule.operator_id.toString() : "",
+            hour: schedule.hour
+          }));
+          
+          setBreakSchedules(mappedSchedules);
+        }
+      } catch (error) {
+        console.error("Error fetching break schedules:", error);
+      }
+    };
     
-    if (savedBreakSchedules) {
-      setBreakSchedules(JSON.parse(savedBreakSchedules));
-    }
+    fetchAttendanceRecords();
+    fetchBreakSchedules();
   }, []);
 
-  // Save data to localStorage when it changes
-  useEffect(() => {
-    localStorage.setItem("attendanceRecords", JSON.stringify(attendanceRecords));
-  }, [attendanceRecords]);
-
-  useEffect(() => {
-    localStorage.setItem("breakSchedules", JSON.stringify(breakSchedules));
-  }, [breakSchedules]);
-
-  const addAttendanceRecord = (record: DailyAttendance) => {
+  const addAttendanceRecord = async (record: DailyAttendance) => {
     setAttendanceRecords(prev => {
       // Remove any existing record for the same operator/date
       const filtered = prev.filter(
@@ -98,27 +126,76 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     return breakSchedules.filter(schedule => schedule.date === date);
   };
 
-  const generateBreakSchedules = (date: string) => {
-    import("@/lib/data").then(({ breakAssignments }) => {
+  const generateBreakSchedules = async (date: string) => {
+    try {
+      // Get all absences for the specified date
       const absences = attendanceRecords
         .filter(r => r.date === date && r.status === "absent")
         .map(r => r.operatorId);
       
+      // Get all supervisor assignments
+      const { data: assignmentData, error: assignmentError } = await supabase
+        .from('break_assignments')
+        .select('supervisor_id, operator_id');
+      
+      if (assignmentError) throw assignmentError;
+      
+      // Get all break rotations for the current month/year
+      const currentDate = new Date(date);
+      const month = currentDate.getMonth() + 1;
+      const year = currentDate.getFullYear();
+      
+      const { data: rotationData, error: rotationError } = await supabase
+        .from('break_rotations')
+        .select('operator_id, hour')
+        .eq('month', month)
+        .eq('year', year);
+      
+      if (rotationError) throw rotationError;
+      
+      // Group operators by supervisor
+      const supervisorGroups: Record<string, string[]> = {};
+      
+      assignmentData.forEach(assignment => {
+        const supervisorId = assignment.supervisor_id.toString();
+        const operatorId = assignment.operator_id.toString();
+        
+        if (!supervisorGroups[supervisorId]) {
+          supervisorGroups[supervisorId] = [];
+        }
+        
+        supervisorGroups[supervisorId].push(operatorId);
+      });
+      
       let newSchedules: BreakSchedule[] = [];
       
-      // Generate schedules for each supervisor group, accounting for absences
-      breakAssignments.forEach(assignment => {
-        const { supervisorId, operatorIds } = assignment;
-        
+      // Generate schedules for each supervisor group
+      Object.entries(supervisorGroups).forEach(([supervisorId, operatorIds]) => {
         // Filter out absent operators
         const presentOperatorIds = operatorIds.filter(id => !absences.includes(id));
         
-        // Assign hours to present operators (15h to 19h)
-        presentOperatorIds.forEach((opId, index) => {
+        // Map operators to their break hours from the rotation data
+        const operatorBreakHours: Record<string, number> = {};
+        
+        rotationData.forEach(rotation => {
+          operatorBreakHours[rotation.operator_id.toString()] = rotation.hour;
+        });
+        
+        // Sort operators by their break hour
+        presentOperatorIds.sort((a, b) => {
+          const hourA = operatorBreakHours[a] || 15;
+          const hourB = operatorBreakHours[b] || 15;
+          return hourA - hourB;
+        });
+        
+        // Create break schedules for present operators
+        presentOperatorIds.forEach(opId => {
+          const breakHour = operatorBreakHours[opId] || 15;
+          
           newSchedules.push({
             supervisorId,
             operatorId: opId,
-            hour: 15 + index,
+            hour: breakHour,
             date,
           });
         });
@@ -132,7 +209,26 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
         });
       });
       
-      // Remove any existing schedules for this date
+      // Save the generated schedules to Supabase
+      const formattedSchedules = newSchedules.map(schedule => ({
+        supervisor_id: parseInt(schedule.supervisorId),
+        operator_id: parseInt(schedule.operatorId),
+        hour: schedule.hour,
+        date: schedule.date
+      }));
+      
+      // Remove existing schedules for this date
+      await supabase
+        .from('break_schedules')
+        .delete()
+        .eq('date', date);
+      
+      // Insert new schedules
+      await supabase
+        .from('break_schedules')
+        .insert(formattedSchedules);
+      
+      // Update local state
       setBreakSchedules(prev => {
         const filtered = prev.filter(s => s.date !== date);
         return [...filtered, ...newSchedules];
@@ -142,8 +238,119 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
         title: "Horários de pausa atualizados",
         description: `Os horários foram ajustados considerando as presenças e ausências de ${date}`,
       });
-    });
+    } catch (error) {
+      console.error("Error generating break schedules:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao gerar os horários de pausa",
+        variant: "destructive"
+      });
+    }
   };
+  
+  // Function to handle monthly rotation of break times
+  const rotateMonthlyBreakTimes = async () => {
+    try {
+      // Get current month and year
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1;
+      const currentYear = currentDate.getFullYear();
+      
+      // Get next month and year
+      let nextMonth = currentMonth + 1;
+      let nextYear = currentYear;
+      if (nextMonth > 12) {
+        nextMonth = 1;
+        nextYear++;
+      }
+      
+      // Get all operators with their current break hours
+      const { data: currentBreakHours, error: currentError } = await supabase
+        .from('break_rotations')
+        .select('operator_id, hour')
+        .eq('month', currentMonth)
+        .eq('year', currentYear);
+      
+      if (currentError) throw currentError;
+      
+      if (currentBreakHours && currentBreakHours.length > 0) {
+        // Prepare rotated break hours for next month
+        const nextMonthRotations = currentBreakHours.map(rotation => {
+          let nextHour: number;
+          
+          // Operators with 19h this month will rotate to 15h next month
+          // All others move forward by 1 hour
+          if (rotation.hour === 19) {
+            nextHour = 15;
+          } else {
+            nextHour = rotation.hour + 1;
+          }
+          
+          return {
+            operator_id: rotation.operator_id,
+            month: nextMonth,
+            year: nextYear,
+            hour: nextHour
+          };
+        });
+        
+        // Insert rotated hours for next month
+        await supabase
+          .from('break_rotations')
+          .upsert(nextMonthRotations, { 
+            onConflict: 'operator_id, month, year'
+          });
+        
+        console.log("Monthly break time rotation completed");
+      }
+    } catch (error) {
+      console.error("Error rotating monthly break times:", error);
+    }
+  };
+  
+  // Check if we need to rotate break times for a new month
+  useEffect(() => {
+    const checkAndRotateBreakTimes = async () => {
+      try {
+        // Get today's date and first day of the month
+        const today = new Date();
+        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        // If today is the first day of the month, check if we need to rotate
+        if (today.getDate() === 1) {
+          // Check if we've already rotated for this month
+          const month = today.getMonth() + 1;
+          const year = today.getFullYear();
+          
+          const storedLastRotation = localStorage.getItem('lastBreakRotation');
+          const lastRotation = storedLastRotation ? JSON.parse(storedLastRotation) : { month: 0, year: 0 };
+          
+          // If we haven't rotated for this month yet
+          if (lastRotation.month !== month || lastRotation.year !== year) {
+            await rotateMonthlyBreakTimes();
+            
+            // Store that we've rotated for this month
+            localStorage.setItem('lastBreakRotation', JSON.stringify({ month, year }));
+            
+            toast({
+              title: "Rotação de horários concluída",
+              description: `Os horários de pausa foram rotacionados para o mês ${month}/${year}`,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error checking break time rotation:", error);
+      }
+    };
+    
+    // Check when the component mounts
+    checkAndRotateBreakTimes();
+    
+    // Set up a daily check
+    const intervalId = setInterval(checkAndRotateBreakTimes, 24 * 60 * 60 * 1000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
     <AttendanceContext.Provider

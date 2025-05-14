@@ -17,6 +17,7 @@ export type Database = {
           employee_id: number
           id: number
           reason: string
+          status: string
           updated_at: string | null
         }
         Insert: {
@@ -26,6 +27,7 @@ export type Database = {
           employee_id: number
           id?: number
           reason: string
+          status?: string
           updated_at?: string | null
         }
         Update: {
@@ -35,6 +37,7 @@ export type Database = {
           employee_id?: number
           id?: number
           reason?: string
+          status?: string
           updated_at?: string | null
         }
         Relationships: [
@@ -47,29 +50,127 @@ export type Database = {
           },
         ]
       }
+      break_assignments: {
+        Row: {
+          created_at: string | null
+          id: number
+          operator_id: number
+          supervisor_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          operator_id: number
+          supervisor_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          operator_id?: number
+          supervisor_id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "break_assignments_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "break_assignments_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      break_rotations: {
+        Row: {
+          created_at: string | null
+          hour: number
+          id: number
+          month: number
+          operator_id: number
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          hour: number
+          id?: number
+          month: number
+          operator_id: number
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          hour?: number
+          id?: number
+          month?: number
+          operator_id?: number
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "break_rotations_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       break_schedules: {
         Row: {
           created_at: string | null
           date: string
+          hour: number
           id: number
-          shifts: string
+          operator_id: number | null
+          supervisor_id: number
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           date: string
+          hour: number
           id?: number
-          shifts: string
+          operator_id?: number | null
+          supervisor_id: number
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           date?: string
+          hour?: number
           id?: number
-          shifts?: string
+          operator_id?: number | null
+          supervisor_id?: number
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "break_schedules_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "break_schedules_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employees: {
         Row: {

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, X, Edit, Trash2, Plus } from "lucide-react";
+import { Check, X, Edit, Trash2, Plus, RefreshCw } from "lucide-react";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +17,6 @@ import OperatorDialog from "@/components/OperatorDialog";
 import { toast } from "@/hooks/use-toast";
 import { Operator } from "@/types/attendance";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
 import { useAttendance } from "@/contexts/AttendanceContext";
 import { formatDate } from "@/lib/data";
 
@@ -83,7 +83,10 @@ const AttendanceSummary: React.FC = () => {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="text-center py-4">Carregando funcionários...</div>
+          <div className="flex flex-col items-center justify-center py-8">
+            <RefreshCw className="h-8 w-8 animate-spin text-blue-500 mb-4" />
+            <p>Carregando funcionários...</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {operators.map(operator => {
