@@ -101,19 +101,40 @@ const AttendanceForm: React.FC = () => {
         status: selectedStatus
       });
       
-      // Add attendance record directly to Supabase
-      const { error } = await supabase
+      // Check if record already exists
+      const { data: existingRecord } = await supabase
         .from('absences_new')
-        .upsert({
-          employee_id: parseInt(selectedOperator),
-          date: formattedDate,
-          status: selectedStatus === "absent" ? "absent" : "present",
-          reason: selectedStatus === "absent" ? "Não informado" : ""
-        }, {
-          onConflict: 'employee_id,date'
-        });
+        .select('*')
+        .eq('employee_id', parseInt(selectedOperator))
+        .eq('date', formattedDate)
+        .single();
       
-      if (error) throw error;
+      if (existingRecord) {
+        // Update existing record
+        const { error } = await supabase
+          .from('absences_new')
+          .update({
+            status: selectedStatus === "absent" ? "absent" : "present",
+            reason: selectedStatus === "absent" ? "Não informado" : "",
+            updated_at: new Date().toISOString()
+          })
+          .eq('employee_id', parseInt(selectedOperator))
+          .eq('date', formattedDate);
+        
+        if (error) throw error;
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from('absences_new')
+          .insert({
+            employee_id: parseInt(selectedOperator),
+            date: formattedDate,
+            status: selectedStatus === "absent" ? "absent" : "present",
+            reason: selectedStatus === "absent" ? "Não informado" : ""
+          });
+        
+        if (error) throw error;
+      }
       
       // Update the local state
       addAttendanceRecord({

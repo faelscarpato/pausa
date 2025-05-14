@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useAttendance } from "@/contexts/AttendanceContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/data";
+import { formatDate, formatDateBR } from "@/lib/data";
 import { Clock, Printer, FileDown, RefreshCw } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -95,24 +95,54 @@ const BreakScheduleTable: React.FC = () => {
     if (!tableRef.current) return;
     
     try {
-      const canvas = await html2canvas(tableRef.current);
+      // Set styles before capturing
+      const originalStyles = tableRef.current.style.cssText;
+      tableRef.current.style.width = "100%";
+      tableRef.current.style.maxWidth = "800px";
+      tableRef.current.style.margin = "0 auto";
+      
+      const canvas = await html2canvas(tableRef.current, {
+        scale: 2, // Higher resolution
+        logging: false,
+        useCORS: true,
+        allowTaint: true
+      });
+      
+      // Reset original styles
+      tableRef.current.style.cssText = originalStyles;
+      
       const imgData = canvas.toDataURL('image/png');
       
-      // Criar PDF em orientação paisagem (landscape)
+      // Create PDF in landscape orientation
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
+        format: 'a4'
       });
       
-      // Ajustar tamanho da imagem para caber na página
-      const imgWidth = 280;
+      // Add header information
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      pdf.setFontSize(16);
+      pdf.text(`Horários de Pausa - ${formatDateBR(selectedDate)}`, pageWidth/2, 15, { align: 'center' });
+      
+      // Calculate dimensions to fit the page properly
+      const imgWidth = pageWidth - 20; // 10mm margins on each side
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      // Adicionar a imagem ao PDF
-      pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+      // Add the image to the PDF
+      pdf.addImage(imgData, 'PNG', 10, 25, imgWidth, imgHeight);
       
-      // Download do PDF
+      // Add footer
+      pdf.setFontSize(10);
+      pdf.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, pageWidth - 15, pdf.internal.pageSize.getHeight() - 10, { align: 'right' });
+      
+      // Download the PDF
       pdf.save(`horarios-pausa-${formattedDate}.pdf`);
+      
+      toast({
+        title: "Sucesso",
+        description: "PDF exportado com sucesso"
+      });
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
       toast({
