@@ -13,7 +13,7 @@ interface AttendanceContextProps {
   getAttendanceForDate: (date: string) => DailyAttendance[];
   getAbsenceCountForMonth: (operatorId: string, year: number, month: number) => number;
   getBreakSchedule: (date: string) => BreakSchedule[];
-  generateBreakSchedules: (date: string) => void;
+  generateBreakSchedules: (date: string) => Promise<void>;
   selectedDate: Date;
   setSelectedDate: (date: Date) => void;
 }
@@ -29,13 +29,15 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const fetchAttendanceRecords = async () => {
       try {
+        console.log("Fetching attendance records...");
         const { data, error } = await supabase
-          .from('absences')
+          .from('absences_new')
           .select('*');
         
         if (error) throw error;
         
         if (data) {
+          console.log("Fetched attendance records:", data.length);
           const mappedRecords: DailyAttendance[] = data.map(record => ({
             date: record.date,
             operatorId: record.employee_id.toString(),
@@ -51,13 +53,15 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     
     const fetchBreakSchedules = async () => {
       try {
+        console.log("Fetching break schedules...");
         const { data, error } = await supabase
-          .from('break_schedules')
+          .from('break_schedules_new')
           .select('*');
         
         if (error) throw error;
         
         if (data) {
+          console.log("Fetched break schedules:", data.length);
           const mappedSchedules: BreakSchedule[] = data.map(schedule => ({
             date: schedule.date,
             supervisorId: schedule.supervisor_id.toString(),
@@ -84,21 +88,19 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       );
       
       // Add the new record
-      const newRecords = [...filtered, record];
-      
-      // Generate break schedules if this is a new date
-      const dateExists = prev.some(r => r.date === record.date);
-      if (!dateExists) {
-        setTimeout(() => generateBreakSchedules(record.date), 0);
-      }
-      
-      toast({
-        title: "Registro atualizado",
-        description: `Status atualizado para ${record.status === 'present' ? 'Presente' : 'Ausente'}`,
-      });
-      
-      return newRecords;
+      return [...filtered, record];
     });
+    
+    toast({
+      title: "Registro atualizado",
+      description: `Status atualizado para ${record.status === 'present' ? 'Presente' : 'Ausente'}`,
+    });
+    
+    // Generate break schedules if this is a new date
+    const dateExists = attendanceRecords.some(r => r.date === record.date);
+    if (!dateExists) {
+      await generateBreakSchedules(record.date);
+    }
   };
 
   const getAttendanceStatus = (operatorId: string, date: string): AttendanceStatus => {
@@ -126,19 +128,23 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
     return breakSchedules.filter(schedule => schedule.date === date);
   };
 
-  const generateBreakSchedules = async (date: string) => {
+  const generateBreakSchedules = async (date: string): Promise<void> => {
     try {
+      console.log("Generating break schedules for date:", date);
       // Get all absences for the specified date
       const absences = attendanceRecords
         .filter(r => r.date === date && r.status === "absent")
         .map(r => r.operatorId);
       
+      console.log("Found absences:", absences);
+      
       // Get all supervisor assignments
       const { data: assignmentData, error: assignmentError } = await supabase
-        .from('break_assignments')
+        .from('break_assignments_new')
         .select('supervisor_id, operator_id');
       
       if (assignmentError) throw assignmentError;
+      console.log("Assignment data:", assignmentData);
       
       // Get all break rotations for the current month/year
       const currentDate = new Date(date);
@@ -146,12 +152,13 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       const year = currentDate.getFullYear();
       
       const { data: rotationData, error: rotationError } = await supabase
-        .from('break_rotations')
+        .from('break_rotations_new')
         .select('operator_id, hour')
         .eq('month', month)
         .eq('year', year);
       
       if (rotationError) throw rotationError;
+      console.log("Rotation data:", rotationData);
       
       // Group operators by supervisor
       const supervisorGroups: Record<string, string[]> = {};
@@ -166,6 +173,8 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
         
         supervisorGroups[supervisorId].push(operatorId);
       });
+      
+      console.log("Supervisor groups:", supervisorGroups);
       
       let newSchedules: BreakSchedule[] = [];
       
@@ -209,6 +218,8 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
         });
       });
       
+      console.log("New schedules generated:", newSchedules.length);
+      
       // Save the generated schedules to Supabase
       const formattedSchedules = newSchedules.map(schedule => ({
         supervisor_id: parseInt(schedule.supervisorId),
@@ -219,14 +230,18 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       
       // Remove existing schedules for this date
       await supabase
-        .from('break_schedules')
+        .from('break_schedules_new')
         .delete()
         .eq('date', date);
       
-      // Insert new schedules
-      await supabase
-        .from('break_schedules')
-        .insert(formattedSchedules);
+      if (formattedSchedules.length > 0) {
+        // Insert new schedules
+        const { error: insertError } = await supabase
+          .from('break_schedules_new')
+          .insert(formattedSchedules);
+        
+        if (insertError) throw insertError;
+      }
       
       // Update local state
       setBreakSchedules(prev => {
@@ -264,9 +279,11 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
         nextYear++;
       }
       
+      console.log(`Rotating break times from ${currentMonth}/${currentYear} to ${nextMonth}/${nextYear}`);
+      
       // Get all operators with their current break hours
       const { data: currentBreakHours, error: currentError } = await supabase
-        .from('break_rotations')
+        .from('break_rotations_new')
         .select('operator_id, hour')
         .eq('month', currentMonth)
         .eq('year', currentYear);
@@ -295,11 +312,13 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
         });
         
         // Insert rotated hours for next month
-        await supabase
-          .from('break_rotations')
+        const { error: insertError } = await supabase
+          .from('break_rotations_new')
           .upsert(nextMonthRotations, { 
             onConflict: 'operator_id, month, year'
           });
+        
+        if (insertError) throw insertError;
         
         console.log("Monthly break time rotation completed");
       }
@@ -314,7 +333,6 @@ export function AttendanceProvider({ children }: { children: React.ReactNode }) 
       try {
         // Get today's date and first day of the month
         const today = new Date();
-        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         
         // If today is the first day of the month, check if we need to rotate
         if (today.getDate() === 1) {

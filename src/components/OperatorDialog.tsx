@@ -28,14 +28,16 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
   useEffect(() => {
     const fetchSupervisors = async () => {
       try {
+        console.log("Fetching supervisors...");
         const { data, error } = await supabase
-          .from('employees')
+          .from('employees_new')
           .select('*')
           .eq('role', 'supervisor');
         
         if (error) throw error;
         
         if (data) {
+          console.log("Fetched supervisors:", data.length);
           const mappedSupervisors = data.map(sup => ({
             id: sup.id.toString(),
             name: sup.name,
@@ -49,7 +51,9 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
       }
     };
 
-    fetchSupervisors();
+    if (open) {
+      fetchSupervisors();
+    }
   }, [open]);
 
   useEffect(() => {
@@ -58,17 +62,19 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
       setRole(operator.role);
       
       // If editing an operator, fetch their supervisor and break hour
-      if (operator.role === 'operator') {
+      if (operator.role === 'operator' && open) {
         const fetchOperatorDetails = async () => {
           try {
+            console.log("Fetching details for operator:", operator.id);
             // Get supervisor assignment
             const { data: assignmentData, error: assignmentError } = await supabase
-              .from('break_assignments')
+              .from('break_assignments_new')
               .select('supervisor_id')
               .eq('operator_id', parseInt(operator.id))
               .single();
             
             if (!assignmentError && assignmentData) {
+              console.log("Found supervisor assignment:", assignmentData);
               setSupervisorId(assignmentData.supervisor_id.toString());
             }
             
@@ -78,7 +84,7 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
             const year = currentDate.getFullYear();
             
             const { data: rotationData, error: rotationError } = await supabase
-              .from('break_rotations')
+              .from('break_rotations_new')
               .select('hour')
               .eq('operator_id', parseInt(operator.id))
               .eq('month', month)
@@ -86,6 +92,7 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
               .single();
             
             if (!rotationError && rotationData) {
+              console.log("Found break rotation:", rotationData);
               setBreakHour(rotationData.hour.toString());
             } else {
               setBreakHour("15"); // Default
@@ -132,9 +139,15 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
       let employeeId: number;
       
       if (mode === 'edit' && operator) {
+        console.log("Updating employee:", {
+          id: operator.id,
+          name: name.trim(),
+          role: role
+        });
+        
         // Update employee in Supabase
         const { error } = await supabase
-          .from('employees')
+          .from('employees_new')
           .update({ 
             name: name.trim(),
             role: role
@@ -149,9 +162,14 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
           description: "Funcionário atualizado com sucesso"
         });
       } else if (mode === 'add') {
+        console.log("Adding new employee:", {
+          name: name.trim(),
+          role: role
+        });
+        
         // Add new employee to Supabase
         const { data, error } = await supabase
-          .from('employees')
+          .from('employees_new')
           .insert({ 
             name: name.trim(),
             role: role
@@ -171,9 +189,11 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
       
       // If employee is an operator, update their supervisor assignment and break hour
       if (role === 'operator') {
+        console.log("Updating break assignments for operator:", employeeId);
+        
         // Update supervisor assignment
-        await supabase
-          .from('break_assignments')
+        const { error: assignmentError } = await supabase
+          .from('break_assignments_new')
           .upsert(
             { 
               supervisor_id: parseInt(supervisorId),
@@ -182,13 +202,22 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
             { onConflict: 'operator_id' }
           );
         
+        if (assignmentError) throw assignmentError;
+        
         // Update break rotation for current month
         const currentDate = new Date();
         const month = currentDate.getMonth() + 1;
         const year = currentDate.getFullYear();
         
-        await supabase
-          .from('break_rotations')
+        console.log("Updating break rotation for operator:", {
+          operator_id: employeeId,
+          month: month,
+          year: year,
+          hour: parseInt(breakHour)
+        });
+        
+        const { error: rotationError } = await supabase
+          .from('break_rotations_new')
           .upsert(
             {
               operator_id: employeeId,
@@ -198,6 +227,8 @@ const OperatorDialog: React.FC<OperatorDialogProps> = ({ operator, onSave, trigg
             },
             { onConflict: 'operator_id, month, year' }
           );
+        
+        if (rotationError) throw rotationError;
       }
       
       setOpen(false);

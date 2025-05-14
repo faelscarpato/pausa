@@ -35,16 +35,18 @@ const AttendanceSummary: React.FC = () => {
   const fetchOperators = async () => {
     setLoading(true);
     try {
+      console.log("Fetching operators for attendance summary...");
       const { data, error } = await supabase
-        .from('employees')
+        .from('employees_new')
         .select('*');
       
       if (error) throw error;
       
       // Convert Supabase data to our Operator type
       if (data) {
+        console.log("Fetched operators:", data.length);
         const mappedOperators: Operator[] = data.map(emp => ({
-          id: emp.id.toString(), // Convert number to string
+          id: emp.id.toString(),
           name: emp.name,
           role: emp.role as 'operator' | 'supervisor',
           isSupervisor: emp.role === 'supervisor'
@@ -151,11 +153,12 @@ const AttendanceSummary: React.FC = () => {
               onClick={async () => {
                 try {
                   if (operatorToDelete) {
+                    console.log("Deleting operator:", operatorToDelete.id);
                     // Delete operator from Supabase
                     const { error } = await supabase
-                      .from('employees')
+                      .from('employees_new')
                       .delete()
-                      .eq('id', parseInt(operatorToDelete.id)); // Convert string to number
+                      .eq('id', parseInt(operatorToDelete.id));
                       
                     if (error) throw error;
                     

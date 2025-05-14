@@ -50,6 +50,47 @@ export type Database = {
           },
         ]
       }
+      absences_new: {
+        Row: {
+          approved: boolean | null
+          created_at: string | null
+          date: string
+          employee_id: number
+          id: number
+          reason: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved?: boolean | null
+          created_at?: string | null
+          date: string
+          employee_id: number
+          id?: number
+          reason: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved?: boolean | null
+          created_at?: string | null
+          date?: string
+          employee_id?: number
+          id?: number
+          reason?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "absences_new_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_new"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       break_assignments: {
         Row: {
           created_at: string | null
@@ -89,6 +130,45 @@ export type Database = {
           },
         ]
       }
+      break_assignments_new: {
+        Row: {
+          created_at: string | null
+          id: number
+          operator_id: number
+          supervisor_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          operator_id: number
+          supervisor_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          operator_id?: number
+          supervisor_id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "break_assignments_new_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: true
+            referencedRelation: "employees_new"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "break_assignments_new_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "employees_new"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       break_rotations: {
         Row: {
           created_at: string | null
@@ -123,6 +203,44 @@ export type Database = {
             columns: ["operator_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      break_rotations_new: {
+        Row: {
+          created_at: string | null
+          hour: number
+          id: number
+          month: number
+          operator_id: number
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          hour: number
+          id?: number
+          month: number
+          operator_id: number
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          hour?: number
+          id?: number
+          month?: number
+          operator_id?: number
+          updated_at?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "break_rotations_new_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "employees_new"
             referencedColumns: ["id"]
           },
         ]
@@ -172,7 +290,76 @@ export type Database = {
           },
         ]
       }
+      break_schedules_new: {
+        Row: {
+          created_at: string | null
+          date: string
+          hour: number
+          id: number
+          operator_id: number | null
+          supervisor_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          hour: number
+          id?: number
+          operator_id?: number | null
+          supervisor_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          hour?: number
+          id?: number
+          operator_id?: number | null
+          supervisor_id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "break_schedules_new_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "employees_new"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "break_schedules_new_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "employees_new"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
+        Row: {
+          created_at: string | null
+          id: number
+          name: string
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          name: string
+          role: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          name?: string
+          role?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      employees_new: {
         Row: {
           created_at: string | null
           id: number

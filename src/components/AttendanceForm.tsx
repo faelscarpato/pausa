@@ -29,13 +29,15 @@ const AttendanceForm: React.FC = () => {
   const fetchOperators = async () => {
     setLoading(true);
     try {
+      console.log("Fetching operators...");
       const { data, error } = await supabase
-        .from('employees')
+        .from('employees_new')
         .select('*')
         .order('name');
       
       if (error) throw error;
       
+      console.log("Fetched operators:", data?.length);
       const mappedOperators: Operator[] = data.map(emp => ({
         id: emp.id.toString(),
         name: emp.name,
@@ -92,10 +94,16 @@ const AttendanceForm: React.FC = () => {
     
     setSubmitting(true);
 
-    // Adicionar registro de presença diretamente no Supabase
     try {
+      console.log("Registering attendance:", {
+        employee_id: parseInt(selectedOperator),
+        date: formattedDate,
+        status: selectedStatus
+      });
+      
+      // Add attendance record directly to Supabase
       const { error } = await supabase
-        .from('absences')
+        .from('absences_new')
         .upsert({
           employee_id: parseInt(selectedOperator),
           date: formattedDate,
@@ -107,7 +115,7 @@ const AttendanceForm: React.FC = () => {
       
       if (error) throw error;
       
-      // Atualizar o estado local
+      // Update the local state
       addAttendanceRecord({
         date: formattedDate,
         operatorId: selectedOperator,

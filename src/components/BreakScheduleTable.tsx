@@ -23,13 +23,15 @@ const BreakScheduleTable: React.FC = () => {
     const fetchEmployees = async () => {
       setLoading(true);
       try {
+        console.log("Fetching employees for break schedule table...");
         const { data, error } = await supabase
-          .from('employees')
+          .from('employees_new')
           .select('*');
         
         if (error) throw error;
         
         if (data) {
+          console.log("Fetched employees:", data.length);
           const employeeMap: Record<string, Operator> = {};
           data.forEach(emp => {
             employeeMap[emp.id] = {
@@ -56,6 +58,11 @@ const BreakScheduleTable: React.FC = () => {
     
     fetchEmployees();
   }, []);
+
+  useEffect(() => {
+    console.log("Current schedules:", schedules);
+    console.log("Current employees:", employees);
+  }, [schedules, employees]);
   
   // Group schedules by supervisor
   const scheduleBySupervisor = React.useMemo(() => {
@@ -76,8 +83,8 @@ const BreakScheduleTable: React.FC = () => {
     return grouped;
   }, [schedules]);
   
-  const handleRegenerateSchedules = () => {
-    generateBreakSchedules(formattedDate);
+  const handleRegenerateSchedules = async () => {
+    await generateBreakSchedules(formattedDate);
   };
 
   const handlePrint = () => {
