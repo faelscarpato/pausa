@@ -1,5 +1,11 @@
 # Welcome to your Lovable project
 
+**Visite O Sistema**
+
+Simply visit the [Gestão de Pausas de Janta](https://pausa.lovable.app) 
+
+htt
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/f3a441d0-5c55-4cfa-8aad-e0c56c6910ab
